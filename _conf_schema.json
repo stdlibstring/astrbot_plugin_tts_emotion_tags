@@ -1,0 +1,20 @@
+{
+  "enable_tts_takeover": {
+    "description": "接管 TTS 合成",
+    "type": "bool",
+    "default": true,
+    "hint": "开启后，按触发概率将部分回复转成带表现标签的语音（同时保留文本）；关闭后回归纯文本。"
+  },
+  "trigger_probability": {
+    "description": "触发概率（0~1）",
+    "type": "float",
+    "default": 0.3,
+    "hint": "仅接管模式下生效。值越大越容易把回复转成语音。例如 0.3 表示约 30% 的回复会变成语音。"
+  },
+  "enable_strip": {
+    "description": "QQ 文本标签剥离",
+    "type": "bool",
+    "default": true,
+    "hint": "接管模式关闭时，是否从发送给 QQ 的文字消息中移除表现标签。"
+  }
+}

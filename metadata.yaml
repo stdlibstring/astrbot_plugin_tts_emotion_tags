@@ -1,0 +1,15 @@
+name: astrbot_plugin_tts_emotion_tags
+version: 0.1.0
+author: Astar
+desc: LLM 回复注入 TTS 表现标签并剥离 QQ 文本标记
+repo: "https://github.com/stdlibstring/astrbot_plugin_tts_emotion_tags"
+display_name: TTS 情绪标签注入
+astrbot_version: ">=4.17.0"
+support_platforms:
+  - aiocqhttp
+  - qq_official
+tags:
+  - tts
+  - voice
+  - emotion
+  - minimax
