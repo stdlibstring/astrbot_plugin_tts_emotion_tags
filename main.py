@@ -89,7 +89,7 @@ _REGEX_TAG_RULES = [
     "astrbot_plugin_tts_emotion_tags",
     "Astar",
     "LLM 回复注入 TTS 表现标签并接管 MiniMax 合成",
-    "0.3.0",
+    "0.3.1",
     "",
 )
 class TTSEmotionTagsPlugin(Star):
