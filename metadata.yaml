@@ -1,5 +1,5 @@
 name: astrbot_plugin_tts_emotion_tags
-version: 0.1.0
+version: 0.3.0
 author: Astar
 desc: LLM 回复注入 TTS 表现标签并剥离 QQ 文本标记
 repo: "https://github.com/stdlibstring/astrbot_plugin_tts_emotion_tags"

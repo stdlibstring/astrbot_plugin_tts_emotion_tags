@@ -71,12 +71,25 @@ _ALIAS_TAG_MAP = {
     "sneeze": "sneezes", "sneezes": "sneezes",
 }
 
+# ============================================================
+# 正则兜底映射（借鉴 GPT 版 stagecraft 的场景判断）
+# 当 LLM 没有输出任何标签时，用这些正则兜底注入一个最贴切的表情。
+# 顺序很重要：先匹配到的优先（sighs 优先级最高，避免误判）。
+# ============================================================
+_REGEX_TAG_RULES = [
+    # (正则, 标签, 插入方式)  insert 为 "prefix"(句首) 或 "after_first_stop"(首个标点后)
+    (re.compile(r"(?:唉|委屈|难过|抱歉|对不起|好累|呜呜|失落|心酸)"), "sighs", "prefix"),
+    (re.compile(r"(?:哈哈|嘿嘿|嘻嘻|好耶|太棒|成功了|找到啦|搞定了|太好了|开心|耶|厉害|棒)"), "chuckle", "after_first_stop"),
+    (re.compile(r"(?:嗯喵|诶[？?！!]?|怎么|为什么|什么情况|奇怪|不对呀|mrow)"), "inhale", "prefix"),
+    (re.compile(r"(?:别急|没关系|慢慢|一步一步|辛苦了|陪你|好不好|晚安|休息|摸头)"), "breath", "after_first_stop"),
+]
+
 
 @register(
     "astrbot_plugin_tts_emotion_tags",
     "Astar",
     "LLM 回复注入 TTS 表现标签并接管 MiniMax 合成",
-    "0.2.0",
+    "0.3.0",
     "",
 )
 class TTSEmotionTagsPlugin(Star):
@@ -233,7 +246,12 @@ class TTSEmotionTagsPlugin(Star):
     # 工具函数
     # ============================================================
     def _decorate_text(self, text: str) -> str:
-        """强制规范化：识别标签→归一化；无法识别的丢弃，绝不喂给 TTS。"""
+        """把 LLM 输出文本规范化成"仅含合法 MiniMax 标签"的 TTS 文本。
+
+        优先级：
+          1. LLM 已经输出的标签 → 归一化/保留（白名单过滤，非法丢弃）
+          2. 若 LLM 一个标签都没写 → 正则兜底注入（_regex_decorate）
+        """
         if not text:
             return text
 
@@ -256,8 +274,66 @@ class TTSEmotionTagsPlugin(Star):
         tagged = re.sub(r"<#\s*(\d+(?:\.\d+)?)\s*>", r"<#\1#>", tagged)
 
         # 清理多余空格（只压缩空格，保留换行结构）
-        tagged = re.sub(r"[ 	]{2,}", " ", tagged)
+        tagged = re.sub(r"[ 	]{2,}", " ", tagged).strip()
+
+        # 兜底：如果规范化后一个标签都没有，尝试正则注入
+        if not re.search(r"\([a-z-]+\)", tagged):
+            tagged = self._regex_decorate(tagged)
+
         return tagged.strip()
+
+    def _regex_decorate(self, text: str) -> str:
+        """正则兜底：当 LLM 没写标签时，按场景关键词注入一个最贴切的表情。
+
+        借鉴 GPT 版 stagecraft 的克制思路：
+          - 受 insert_probability 概率控制（默认 0.38）
+          - 受 max_tags_per_message 上限控制（默认 1）
+          - 命中后只在合适位置插入一个标签
+        """
+        if not text:
+            return text
+
+        # 概率控制
+        try:
+            prob = float(self.config.get("insert_probability", 0.38))
+            prob = max(0.0, min(prob, 1.0))
+        except (TypeError, ValueError):
+            prob = 0.38
+        if random.random() > prob:
+            return text
+
+        # 每段最多标签数
+        try:
+            max_tags = max(0, min(3, int(self.config.get("max_tags_per_message", 1))))
+        except (TypeError, ValueError):
+            max_tags = 1
+        if max_tags < 1:
+            return text
+
+        # 按优先级匹配（sighs 优先，避免"难过+哈哈"误判成开心）
+        inserted = 0
+        result = text
+        for regex, tag, how in _REGEX_TAG_RULES:
+            if inserted >= max_tags:
+                break
+            if not regex.search(result):
+                continue
+            if how == "prefix":
+                # 句首（跳过前导空白）
+                m = re.match(r"^\s*", result)
+                pos = m.end() if m else 0
+                result = f"{result[:pos]}({tag}) {result[pos:]}"
+            else:
+                # 首个标点之后
+                m = re.search(r"[。！？!?，,]", result)
+                if m:
+                    pos = m.end()
+                    result = f"{result[:pos]}({tag}){result[pos:]}"
+                else:
+                    result = f"{result}({tag})"
+            inserted += 1
+
+        return result
 
     def _strip_tags(self, text: str) -> str:
         """超宽剥离：移除一切括号标签和停顿指令，保证 QQ 文本干净。"""

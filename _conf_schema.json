@@ -6,15 +6,27 @@
     "hint": "开启后，按触发概率将部分回复转成带表现标签的语音（同时保留文本）；关闭后回归纯文本。"
   },
   "trigger_probability": {
-    "description": "触发概率（0~1）",
+    "description": "语音触发概率（0~1）",
     "type": "float",
     "default": 0.3,
-    "hint": "仅接管模式下生效。值越大越容易把回复转成语音。例如 0.3 表示约 30% 的回复会变成语音。"
+    "hint": "仅接管模式生效。值越大越容易把回复转成语音。0.3 表示约 30% 的回复会变成语音。"
+  },
+  "insert_probability": {
+    "description": "正则兜底注入概率（0~1）",
+    "type": "float",
+    "default": 0.38,
+    "hint": "当 LLM 没有自己写表现标签时，按场景关键词兜底注入的概率。建议 0.25~0.45，过高会显得刻意。"
+  },
+  "max_tags_per_message": {
+    "description": "每段最多标签数",
+    "type": "int",
+    "default": 1,
+    "hint": "正则兜底时，每段语音最多注入的表演标签数量。建议保持 1。"
   },
   "enable_strip": {
-    "description": "QQ 文本标签剥离",
+    "description": "QQ 文本标签剥离（仅非接管模式生效）",
     "type": "bool",
     "default": true,
-    "hint": "接管模式关闭时，是否从发送给 QQ 的文字消息中移除表现标签。"
+    "hint": "接管模式关闭时，是否从发送给 QQ 的文字消息中移除表现标签。接管模式开启时此选项不影响。"
   }
 }
